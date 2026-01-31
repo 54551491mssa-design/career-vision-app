@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Career Dual-Axis Simulator Enhanced</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .selected-btn { background-color: #3b82f6 !important; color: white !important; }
+        .company-card { transition: all 0.3s; }
+        .company-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen pb-10">
+
+    <header class="gradient-bg text-white p-6 shadow-lg mb-8">
+        <h1 class="text-2xl font-bold">Career Vision Simulator Enhanced</h1>
+        <p class="text-sm opacity-80">論理 × メンタル × 将来性で描く自己決定支援ツール（企業比較版）</p>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 space-y-8">
+
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 text-sm text-yellow-700">
+            <p>【重要】本ツールは2026年1月時点の公開データに基づくシミュレーションです。将来を保証するものではなく、最終的なキャリア決定はご自身の責任で行ってください。</p>
+        </div>
+
+        <div class="bg-purple-50 border-l-4 border-purple-400 p-4 text-sm">
+            <p class="font-medium mb-2 text-purple-800">【新機能】ネット検索機能について</p>
+            <p class="text-gray-700 mb-2">データベースにない中小企業・非上場企業は「ネットで検索」ボタンで情報を推定できます。</p>
+            <details class="text-xs text-gray-600">
+                <summary class="cursor-pointer hover:text-purple-600">サーバー起動方法（クリックで表示）</summary>
+                <div class="mt-2 p-3 bg-white rounded">
+                    <p class="font-medium mb-1">コマンドプロンプトで以下を実行:</p>
+                    <code class="block bg-gray-800 text-green-400 p-2 rounded mt-1">
+                        cd C:\Users\roots<br>
+                        pip install -r requirements.txt<br>
+                        python company_search_server.py
+                    </code>
+                    <p class="mt-2 text-red-600">※ サーバーを起動しなくても、手動入力で全機能が利用可能です</p>
+                </div>
+            </details>
+        </div>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm space-y-6">
+            <h2 class="text-xl font-semibold border-b pb-2">1. 企業情報の入力</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 現在の企業 -->
+                <div class="company-card border-2 border-blue-200 p-5 rounded-xl bg-blue-50">
+                    <h3 class="font-bold text-blue-700 mb-4 text-center">現在の勤務先</h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">企業名</label>
+                            <input type="text" id="currentCompanyName" list="companyList"
+                                   placeholder="例: 富士通"
+                                   class="w-full border p-2 rounded">
+                            <div class="flex gap-2 mt-2">
+                                <button onclick="loadCompanyData('current')" class="flex-1 bg-blue-500 text-white py-1 px-3 rounded text-sm hover:bg-blue-600">DBから読み込む</button>
+                                <button onclick="searchCompanyOnline('current')" class="flex-1 bg-purple-500 text-white py-1 px-3 rounded text-sm hover:bg-purple-600">ネットで検索</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">現在の年収 (万円)</label>
+                            <input type="number" id="currentIncome" value="600" class="w-full border p-2 rounded">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">現在の業界</label>
+                            <select id="currentIndustry" class="w-full border p-2 rounded">
+                                <option value="it">IT・通信（平均466万）</option>
+                                <option value="consulting">コンサルティング（平均546万）</option>
+                                <option value="finance">金融（平均500万）</option>
+                                <option value="manufacturing">メーカー（平均492万）</option>
+                                <option value="trading">商社（平均479万）</option>
+                                <option value="other">その他業界</option>
+                            </select>
+                        </div>
+
+                        <div id="currentCompanyInfo" class="bg-white p-3 rounded text-xs text-gray-600 hidden">
+                            <p class="font-medium text-blue-700 mb-1">企業データ</p>
+                            <p id="currentCompanyDetails"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 転職先の企業 -->
+                <div class="company-card border-2 border-green-200 p-5 rounded-xl bg-green-50">
+                    <h3 class="font-bold text-green-700 mb-4 text-center">転職先候補</h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">次キャリアの形態</label>
+                            <select id="careerType" onchange="updateCareerType()" class="w-full border p-2 rounded">
+                                <option value="corporate">会社員（転職）</option>
+                                <option value="freelance">独立・フリーランス</option>
+                            </select>
+                        </div>
+
+                        <div id="targetCompanyNameDiv">
+                            <label class="block text-sm font-medium mb-1">転職先企業名</label>
+                            <input type="text" id="targetCompanyName" list="companyList"
+                                   placeholder="例: 野村総合研究所"
+                                   class="w-full border p-2 rounded">
+                            <div class="flex gap-2 mt-2">
+                                <button onclick="loadCompanyData('target')" class="flex-1 bg-green-500 text-white py-1 px-3 rounded text-sm hover:bg-green-600">DBから読み込む</button>
+                                <button onclick="searchCompanyOnline('target')" class="flex-1 bg-purple-500 text-white py-1 px-3 rounded text-sm hover:bg-purple-600">ネットで検索</button>
+                            </div>
+                        </div>
+
+                        <div id="freelanceInfoDiv" class="hidden bg-blue-100 p-3 rounded">
+                            <p class="text-sm font-medium mb-1">フリーランス想定</p>
+                            <p class="text-xs text-gray-700">月額単価60-90万（年収720-1080万）<br>手取り率65-70%（税金・保険30-35%）</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">目標年収 (万円)</label>
+                            <input type="number" id="targetIncome" value="800" class="w-full border p-2 rounded">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">業界の将来性</label>
+                            <select id="industryGrowth" class="w-full border p-2 rounded">
+                                <option value="1.3">急成長（生成AI・DX最前線）</option>
+                                <option value="1.15">成長（AI活用・クラウド等）</option>
+                                <option value="1.0" selected>成熟（安定・大企業中心）</option>
+                                <option value="0.9">緩やかな衰退（レガシー産業）</option>
+                                <option value="0.7">構造的衰退（自動化・縮小）</option>
+                            </select>
+                        </div>
+
+                        <div id="targetCompanyInfo" class="bg-white p-3 rounded text-xs text-gray-600 hidden">
+                            <p class="font-medium text-green-700 mb-1">企業データ</p>
+                            <p id="targetCompanyDetails"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 企業比較サマリー -->
+            <div id="comparisonSummary" class="hidden mt-6 p-5 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border">
+                <h4 class="font-bold mb-3 text-center">企業比較サマリー</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="text-center">
+                        <p class="text-xs text-gray-600">年収差分</p>
+                        <p id="incomeDiff" class="text-2xl font-bold text-purple-600">--</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-xs text-gray-600">年収上昇率</p>
+                        <p id="incomeIncrease" class="text-2xl font-bold text-green-600">--</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-xs text-gray-600">業界平均との差</p>
+                        <p id="industryGap" class="text-2xl font-bold text-blue-600">--</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm space-y-6">
+            <h2 class="text-xl font-semibold border-b pb-2">2. 現職メンタル診断（6項目）</h2>
+            <p class="text-sm text-gray-600">各質問に正直に答えてください。メンタルスコアが低いと、将来の成長率が減衰します。</p>
+
+            <div class="space-y-6">
+                <div class="border-b pb-4">
+                    <p class="font-medium text-sm mb-2">Q1. 社風や人間関係に満足していますか？</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="setScore('culture', 10)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">非常に不満</button>
+                        <button onclick="setScore('culture', 30)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">不満</button>
+                        <button onclick="setScore('culture', 50)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">普通</button>
+                        <button onclick="setScore('culture', 70)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">満足</button>
+                        <button onclick="setScore('culture', 90)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">非常に満足</button>
+                    </div>
+                </div>
+
+                <div class="border-b pb-4">
+                    <p class="font-medium text-sm mb-2">Q2. 仕事にやりがいを感じていますか？</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="setScore('fulfillment', 10)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">全く感じない</button>
+                        <button onclick="setScore('fulfillment', 30)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">あまり感じない</button>
+                        <button onclick="setScore('fulfillment', 50)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">普通</button>
+                        <button onclick="setScore('fulfillment', 70)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">感じる</button>
+                        <button onclick="setScore('fulfillment', 90)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">強く感じる</button>
+                    </div>
+                </div>
+
+                <div class="border-b pb-4">
+                    <p class="font-medium text-sm mb-2">Q3. ワークライフバランスは取れていますか？</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="setScore('worklife', 10)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">完全崩壊</button>
+                        <button onclick="setScore('worklife', 30)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">厳しい</button>
+                        <button onclick="setScore('worklife', 50)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">普通</button>
+                        <button onclick="setScore('worklife', 70)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">良好</button>
+                        <button onclick="setScore('worklife', 90)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">非常に良好</button>
+                    </div>
+                </div>
+
+                <div class="border-b pb-4">
+                    <p class="font-medium text-sm mb-2">Q4. スキルや市場価値の成長を実感していますか？</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="setScore('growth', 10)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">停滞・劣化</button>
+                        <button onclick="setScore('growth', 30)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">あまり成長していない</button>
+                        <button onclick="setScore('growth', 50)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">現状維持</button>
+                        <button onclick="setScore('growth', 70)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">成長している</button>
+                        <button onclick="setScore('growth', 90)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">急成長している</button>
+                    </div>
+                </div>
+
+                <div class="border-b pb-4">
+                    <p class="font-medium text-sm mb-2">Q5. 現在の給与に満足していますか？</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="setScore('salary', 10)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">全く不満</button>
+                        <button onclick="setScore('salary', 30)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">不満</button>
+                        <button onclick="setScore('salary', 50)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">普通</button>
+                        <button onclick="setScore('salary', 70)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">満足</button>
+                        <button onclick="setScore('salary', 90)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">非常に満足</button>
+                    </div>
+                </div>
+
+                <div class="pb-4">
+                    <p class="font-medium text-sm mb-2">Q6. 上司や経営陣を信頼していますか？</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="setScore('trust', 10)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">全く信頼していない</button>
+                        <button onclick="setScore('trust', 30)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">あまり信頼していない</button>
+                        <button onclick="setScore('trust', 50)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">普通</button>
+                        <button onclick="setScore('trust', 70)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">信頼している</button>
+                        <button onclick="setScore('trust', 90)" class="btn-score border px-3 py-2 rounded text-sm hover:bg-blue-50">強く信頼している</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <button onclick="runSimulation()" class="w-full gradient-bg text-white py-4 rounded-xl font-bold shadow-lg hover:opacity-90 transition">
+            シミュレーションを実行する
+        </button>
+
+        <section id="resultSection" class="hidden space-y-8">
+            <!-- 企業比較カード -->
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="font-semibold mb-4 text-lg text-center">企業比較分析</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-3 text-left">項目</th>
+                                <th class="p-3 text-center bg-blue-50">現在の勤務先</th>
+                                <th class="p-3 text-center bg-green-50">転職先候補</th>
+                                <th class="p-3 text-center">差分</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <tr>
+                                <td class="p-3 font-medium">企業名</td>
+                                <td class="p-3 text-center" id="compareCurrentName">--</td>
+                                <td class="p-3 text-center" id="compareTargetName">--</td>
+                                <td class="p-3 text-center">--</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-medium">年収</td>
+                                <td class="p-3 text-center" id="compareCurrentIncome">--</td>
+                                <td class="p-3 text-center" id="compareTargetIncome">--</td>
+                                <td class="p-3 text-center font-bold" id="compareIncomeDiff">--</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-medium">業界平均年収</td>
+                                <td class="p-3 text-center" id="compareCurrentAvg">--</td>
+                                <td class="p-3 text-center" id="compareTargetAvg">--</td>
+                                <td class="p-3 text-center" id="compareAvgDiff">--</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-medium">業界成長性</td>
+                                <td class="p-3 text-center" id="compareCurrentGrowth">--</td>
+                                <td class="p-3 text-center" id="compareTargetGrowth">--</td>
+                                <td class="p-3 text-center" id="compareGrowthDiff">--</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 font-medium">10年後予測(平均)</td>
+                                <td class="p-3 text-center" id="compareCurrent10y">--</td>
+                                <td class="p-3 text-center font-bold text-green-600" id="compareTarget10y">--</td>
+                                <td class="p-3 text-center font-bold" id="compare10yDiff">--</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="font-semibold mb-4 text-lg">メンタルスコア詳細</h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div class="border p-3 rounded">
+                        <p class="text-xs text-gray-500">社風・人間関係</p>
+                        <p id="scoreCulture" class="text-xl font-bold text-blue-600">--</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <p class="text-xs text-gray-500">仕事のやりがい</p>
+                        <p id="scoreFulfillment" class="text-xl font-bold text-blue-600">--</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <p class="text-xs text-gray-500">ワークライフバランス</p>
+                        <p id="scoreWorklife" class="text-xl font-bold text-blue-600">--</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <p class="text-xs text-gray-500">スキル成長実感</p>
+                        <p id="scoreGrowth" class="text-xl font-bold text-blue-600">--</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <p class="text-xs text-gray-500">給与満足度</p>
+                        <p id="scoreSalary" class="text-xl font-bold text-blue-600">--</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <p class="text-xs text-gray-500">経営陣への信頼</p>
+                        <p id="scoreTrust" class="text-xl font-bold text-blue-600">--</p>
+                    </div>
+                </div>
+                <div class="mt-4 p-4 bg-gray-50 rounded">
+                    <p class="text-sm font-medium">総合メンタルスコア: <span id="totalMental" class="text-2xl font-bold text-purple-600">--</span>/100</p>
+                    <p class="text-xs text-gray-600 mt-2" id="mentalImpact">--</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-lg shadow text-center">
+                    <p class="text-sm text-gray-500">現職親和性</p>
+                    <p id="scoreAffinity" class="text-3xl font-bold text-blue-600">--</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow text-center">
+                    <p class="text-sm text-gray-500">転職成功期待値</p>
+                    <p id="scoreMatch" class="text-3xl font-bold text-green-600">--</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow text-center">
+                    <p class="text-sm text-gray-500">10年後期待値(平均)</p>
+                    <p id="expectIncome" class="text-3xl font-bold text-purple-600">--</p>
+                    <p class="text-xs text-gray-500 mt-1" id="expectNet">手取り: --</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="font-semibold mb-4 text-center">10年間の年収推移シナリオ</h3>
+                <canvas id="incomeChart"></canvas>
+                <div class="mt-4 text-xs text-gray-500 space-y-1">
+                    <p>・<span class="text-green-600 font-bold">楽観シナリオ</span>: 業界平均+20%の成長 × メンタル維持</p>
+                    <p>・<span class="text-blue-600 font-bold">平均シナリオ</span>: 業界平均成長 × メンタル係数</p>
+                    <p>・<span class="text-red-600 font-bold">ストレッチシナリオ</span>: 案件減・メンタル不調時</p>
+                    <p>・<span class="text-gray-600 font-bold">現職継続</span>: 現職に留まった場合の想定（メンタル負荷考慮）</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="font-semibold mb-4">数値計算の根拠</h3>
+                <div id="calculationBasis" class="text-sm space-y-2 text-gray-700"></div>
+            </div>
+
+            <div class="bg-gray-800 text-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-lg font-bold mb-2">AI解析アドバイス</h3>
+                <p id="aiAdvice" class="text-gray-300 text-sm leading-relaxed whitespace-pre-line"></p>
+                <div class="mt-4 flex items-center">
+                    <input type="checkbox" id="selfConfirm" class="mr-2">
+                    <label for="selfConfirm" class="text-xs text-yellow-400">データの傾向を理解し、最後は自分の意志で決断することを誓います</label>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 text-sm">
+                <p class="font-medium mb-2">データ出典 (2026年1月)</p>
+                <ul class="text-xs space-y-1 text-gray-700">
+                    <li>・OpenWork 平均年収ランキング</li>
+                    <li>・Yahoo!しごとカタログ (21,612社)</li>
+                    <li>・各社有価証券報告書</li>
+                    <li>・フリーランス実態調査（複数サイト統合）</li>
+                    <li>・Publickey IT系上場企業調査</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <!-- 企業データリスト -->
+    <datalist id="companyList">
+        <!-- 超高年収 -->
+        <option value="Google">Google (平均6145万)</option>
+        <option value="M&Aキャピタルパートナーズ">M&Aキャピタルパートナーズ (平均3493万)</option>
+        <option value="モルガン・スタンレーMUFG証券">モルガン・スタンレーMUFG証券 (平均2457万)</option>
+        <option value="三菱商事">三菱商事 (平均1800万)</option>
+        <option value="伊藤忠商事">伊藤忠商事 (平均1700万)</option>
+
+        <!-- 大手コンサル・シンクタンク -->
+        <option value="野村総合研究所">野村総合研究所/NRI (平均1322万)</option>
+        <option value="オービック">オービック (平均1103万)</option>
+        <option value="伊藤忠テクノソリューションズ">伊藤忠テクノソリューションズ/CTC (平均1076万)</option>
+        <option value="ソニー">ソニー (平均1050万)</option>
+        <option value="電通国際情報サービス">電通国際情報サービス/ISID (平均1020万)</option>
+        <option value="野村證券">野村證券 (平均1000万)</option>
+
+        <!-- 大手IT・メーカー -->
+        <option value="富士通">富士通 (平均929万)</option>
+        <option value="日立製作所">日立製作所 (平均900万)</option>
+        <option value="アクセンチュア">アクセンチュア (平均869万)</option>
+        <option value="NTTデータ">NTTデータ (平均850万)</option>
+        <option value="日本ユニシス">日本ユニシス/BIPROGY (平均846万)</option>
+
+        <!-- 中堅SIer・IT -->
+        <option value="TIS">TIS (平均807万)</option>
+        <option value="NEC">NEC (平均800万)</option>
+        <option value="パナソニック">パナソニック (平均800万)</option>
+        <option value="フューチャー">フューチャー (平均798万)</option>
+        <option value="SCSK">SCSK (平均788万)</option>
+        <option value="サイバーエージェント">サイバーエージェント (平均770万)</option>
+        <option value="楽天">楽天 (平均750万)</option>
+        <option value="オービックビジネスコンサルタント">オービックビジネスコンサルタント (平均720万)</option>
+        <option value="日鉄ソリューションズ">日鉄ソリューションズ (平均700万)</option>
+
+        <!-- 中小企業 -->
+        <option value="JBCC">JBCCホールディングス (平均650万)</option>
+        <option value="中堅SIer">中堅SIer平均 (平均600万)</option>
+        <option value="ビーウィズ">ビーウィズ (平均530万)</option>
+        <option value="中小SIer">中小SIer平均 (平均480万)</option>
+    </datalist>
+
+    <script>
+        // 企業データベース（実データベース - 2026年1月時点）
+        const companyDatabase = {
+            // 超高年収（1500万以上）
+            "Google": { avgSalary: 6145, industry: "外資IT", growth: 1.25, type: "外資系", size: "超大手" },
+            "M&Aキャピタルパートナーズ": { avgSalary: 3493, industry: "金融・投資", growth: 1.15, type: "専門職", size: "専門" },
+            "モルガン・スタンレーMUFG証券": { avgSalary: 2457, industry: "金融・証券", growth: 1.1, type: "外資系", size: "大手" },
+            "三菱商事": { avgSalary: 1800, industry: "総合商社", growth: 1.08, type: "国内大手", size: "大手" },
+            "伊藤忠商事": { avgSalary: 1700, industry: "総合商社", growth: 1.08, type: "国内大手", size: "大手" },
+
+            // 大手（1000-1500万）
+            "野村総合研究所": { avgSalary: 1322, industry: "コンサル・IT", growth: 1.15, type: "国内大手", size: "大手上場" },
+            "オービック": { avgSalary: 1103, industry: "IT・パッケージ", growth: 1.12, type: "国内大手", size: "大手上場" },
+            "伊藤忠テクノソリューションズ": { avgSalary: 1076, industry: "IT・SI", growth: 1.12, type: "国内大手", size: "大手上場" },
+            "ソニー": { avgSalary: 1050, industry: "製造・エンタメ", growth: 1.12, type: "国内大手", size: "大手上場" },
+            "電通国際情報サービス": { avgSalary: 1020, industry: "IT・SI", growth: 1.1, type: "国内大手", size: "大手上場" },
+            "野村證券": { avgSalary: 1000, industry: "金融・証券", growth: 1.05, type: "国内大手", size: "大手上場" },
+
+            // 大手（800-1000万）
+            "富士通": { avgSalary: 929, industry: "IT・製造", growth: 1.05, type: "国内大手", size: "大手上場" },
+            "日立製作所": { avgSalary: 900, industry: "製造・IT", growth: 1.08, type: "国内大手", size: "大手上場" },
+            "アクセンチュア": { avgSalary: 869, industry: "コンサルティング", growth: 1.2, type: "外資系", size: "大手" },
+            "NTTデータ": { avgSalary: 850, industry: "IT・SI", growth: 1.1, type: "国内大手", size: "大手上場" },
+            "日本ユニシス": { avgSalary: 846, industry: "IT・SI", growth: 1.08, type: "国内大手", size: "大手上場" },
+
+            // 中堅（700-850万）
+            "TIS": { avgSalary: 807, industry: "IT・SI", growth: 1.1, type: "国内中堅", size: "中堅上場" },
+            "NEC": { avgSalary: 800, industry: "IT・製造", growth: 1.05, type: "国内大手", size: "大手" },
+            "パナソニック": { avgSalary: 800, industry: "製造", growth: 0.95, type: "国内大手", size: "大手" },
+            "フューチャー": { avgSalary: 798, industry: "IT・コンサル", growth: 1.12, type: "国内中堅", size: "中堅上場" },
+            "SCSK": { avgSalary: 788, industry: "IT・SI", growth: 1.1, type: "国内中堅", size: "中堅上場" },
+            "サイバーエージェント": { avgSalary: 770, industry: "IT・広告", growth: 1.15, type: "国内中堅", size: "中堅上場" },
+            "楽天": { avgSalary: 750, industry: "IT・EC", growth: 1.1, type: "国内中堅", size: "中堅上場" },
+            "オービックビジネスコンサルタント": { avgSalary: 720, industry: "IT・パッケージ", growth: 1.08, type: "国内中堅", size: "中堅上場" },
+            "日鉄ソリューションズ": { avgSalary: 700, industry: "IT・SI", growth: 1.05, type: "国内中堅", size: "中堅上場" },
+
+            // 中小企業（450-700万）
+            "JBCC": { avgSalary: 650, industry: "IT・SI", growth: 1.03, type: "国内中小", size: "中小上場" },
+            "中堅SIer": { avgSalary: 600, industry: "IT・SI", growth: 1.05, type: "国内中小", size: "中堅未上場" },
+            "ビーウィズ": { avgSalary: 530, industry: "IT・BPO", growth: 1.05, type: "国内中小", size: "中小上場" },
+            "中小SIer": { avgSalary: 480, industry: "IT・SI", growth: 1.0, type: "国内中小", size: "中小未上場" }
+        };
+
+        let scores = {
+            culture: 50,
+            fulfillment: 50,
+            worklife: 50,
+            growth: 50,
+            salary: 50,
+            trust: 50
+        };
+        let chartInstance = null;
+        let currentCompanyData = null;
+        let targetCompanyData = null;
+
+        function setScore(key, val) {
+            scores[key] = val;
+
+            // ボタンの選択状態を視覚的に表示
+            document.querySelectorAll('.btn-score').forEach(btn => {
+                const btnOnClick = btn.getAttribute('onclick');
+                if(btnOnClick && btnOnClick.includes(`'${key}'`) && btnOnClick.includes(`, ${val})`)) {
+                    btn.classList.add('selected-btn');
+                } else if(btnOnClick && btnOnClick.includes(`'${key}'`)) {
+                    btn.classList.remove('selected-btn');
+                }
+            });
+        }
+
+        function loadCompanyData(target) {
+            const inputField = target === 'current' ? 'currentCompanyName' : 'targetCompanyName';
+            const companyName = document.getElementById(inputField).value.trim();
+
+            if(companyDatabase[companyName]) {
+                const data = companyDatabase[companyName];
+
+                if(target === 'current') {
+                    currentCompanyData = data;
+                    document.getElementById('currentIncome').value = data.avgSalary;
+                    document.getElementById('currentCompanyInfo').classList.remove('hidden');
+                    document.getElementById('currentCompanyDetails').innerHTML =
+                        `<strong>データ種別:</strong> データベース登録済み<br>平均年収: ${data.avgSalary}万円<br>業界: ${data.industry}<br>規模: ${data.size}<br>成長率目安: 年${((data.growth - 1) * 100).toFixed(0)}%`;
+                } else {
+                    targetCompanyData = data;
+                    document.getElementById('targetIncome').value = data.avgSalary;
+                    document.getElementById('industryGrowth').value = data.growth;
+                    document.getElementById('targetCompanyInfo').classList.remove('hidden');
+                    document.getElementById('targetCompanyDetails').innerHTML =
+                        `<strong>データ種別:</strong> データベース登録済み<br>平均年収: ${data.avgSalary}万円<br>業界: ${data.industry}<br>規模: ${data.size}<br>成長率目安: 年${((data.growth - 1) * 100).toFixed(0)}%`;
+                }
+
+                // 比較サマリーを表示
+                updateComparisonSummary();
+            } else {
+                alert('企業データが見つかりません。「ネットで検索」ボタンを試すか、手動で入力してください。');
+            }
+        }
+
+        async function searchCompanyOnline(target) {
+            const inputField = target === 'current' ? 'currentCompanyName' : 'targetCompanyName';
+            const companyName = document.getElementById(inputField).value.trim();
+
+            if(!companyName) {
+                alert('企業名を入力してください');
+                return;
+            }
+
+            // ローディング表示
+            const button = event.target;
+            const originalText = button.innerText;
+            button.innerText = '検索中...';
+            button.disabled = true;
+
+            try {
+                // バックエンドサーバーに問い合わせ
+                const response = await fetch('http://localhost:5000/search_company', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ company_name: companyName })
+                });
+
+                if(!response.ok) {
+                    throw new Error('サーバーからのレスポンスエラー');
+                }
+
+                const data = await response.json();
+
+                if(data.error) {
+                    throw new Error(data.error);
+                }
+
+                // 取得したデータを反映
+                const companyData = {
+                    avgSalary: data.estimated_salary,
+                    industry: data.industry,
+                    growth: data.growth_rate,
+                    type: '推定',
+                    size: data.size
+                };
+
+                if(target === 'current') {
+                    currentCompanyData = companyData;
+                    document.getElementById('currentIncome').value = data.estimated_salary;
+                    document.getElementById('currentCompanyInfo').classList.remove('hidden');
+                    document.getElementById('currentCompanyDetails').innerHTML =
+                        `<strong>データ種別:</strong> ネット検索による推定<br>推定年収: ${data.estimated_salary}万円<br>推定業界: ${data.industry}<br>規模: ${data.size}<br>成長率目安: 年${((data.growth_rate - 1) * 100).toFixed(0)}%<br><span class="text-red-600">${data.note}</span>`;
+                } else {
+                    targetCompanyData = companyData;
+                    document.getElementById('targetIncome').value = data.estimated_salary;
+                    document.getElementById('industryGrowth').value = data.growth_rate;
+                    document.getElementById('targetCompanyInfo').classList.remove('hidden');
+                    document.getElementById('targetCompanyDetails').innerHTML =
+                        `<strong>データ種別:</strong> ネット検索による推定<br>推定年収: ${data.estimated_salary}万円<br>推定業界: ${data.industry}<br>規模: ${data.size}<br>成長率目安: 年${((data.growth_rate - 1) * 100).toFixed(0)}%<br><span class="text-red-600">${data.note}</span>`;
+                }
+
+                // 比較サマリーを表示
+                updateComparisonSummary();
+
+                alert(`企業情報を推定しました。\n企業名: ${companyName}\n推定年収: ${data.estimated_salary}万円\n\n※これは推定値です。実際の値と異なる可能性があります。`);
+
+            } catch(error) {
+                console.error('検索エラー:', error);
+                alert(`企業情報の検索に失敗しました。\n\nエラー: ${error.message}\n\nバックエンドサーバーが起動しているか確認してください。\nコマンドライン: python company_search_server.py`);
+            } finally {
+                button.innerText = originalText;
+                button.disabled = false;
+            }
+        }
+
+        function updateCareerType() {
+            const type = document.getElementById('careerType').value;
+            const companyDiv = document.getElementById('targetCompanyNameDiv');
+            const freelanceDiv = document.getElementById('freelanceInfoDiv');
+
+            if(type === 'freelance') {
+                companyDiv.classList.add('hidden');
+                freelanceDiv.classList.remove('hidden');
+                document.getElementById('targetIncome').value = 850;
+                document.getElementById('targetCompanyInfo').classList.add('hidden');
+            } else {
+                companyDiv.classList.remove('hidden');
+                freelanceDiv.classList.add('hidden');
+            }
+        }
+
+        function updateComparisonSummary() {
+            const current = parseFloat(document.getElementById('currentIncome').value);
+            const target = parseFloat(document.getElementById('targetIncome').value);
+
+            if(current && target && !isNaN(current) && !isNaN(target)) {
+                const diff = target - current;
+                const increase = ((diff / current) * 100).toFixed(1);
+
+                document.getElementById('incomeDiff').innerText = (diff > 0 ? '+' : '') + diff + '万円';
+                document.getElementById('incomeIncrease').innerText = (diff > 0 ? '+' : '') + increase + '%';
+
+                // 業界平均との差
+                const industryAvg = 754; // 上場企業平均
+                const gap = target - industryAvg;
+                document.getElementById('industryGap').innerText = (gap > 0 ? '+' : '') + gap + '万円';
+
+                document.getElementById('comparisonSummary').classList.remove('hidden');
+            }
+        }
+
+        function runSimulation() {
+            try {
+                const currentCompanyName = document.getElementById('currentCompanyName').value || "現在の勤務先";
+                const targetCompanyName = document.getElementById('targetCompanyName').value || "転職先候補";
+                const current = parseFloat(document.getElementById('currentIncome').value);
+                const target = parseFloat(document.getElementById('targetIncome').value);
+                const growth = parseFloat(document.getElementById('industryGrowth').value);
+                const type = document.getElementById('careerType').value;
+
+                // 1. メンタルスコア計算
+                const mentalScore = (scores.culture + scores.fulfillment + scores.worklife + scores.growth + scores.salary + scores.trust) / 6;
+                const mentalMultiplier = 0.5 + (mentalScore / 100) * 0.5; // 50%-100%の係数
+
+                document.getElementById('scoreCulture').innerText = scores.culture;
+                document.getElementById('scoreFulfillment').innerText = scores.fulfillment;
+                document.getElementById('scoreWorklife').innerText = scores.worklife;
+                document.getElementById('scoreGrowth').innerText = scores.growth;
+                document.getElementById('scoreSalary').innerText = scores.salary;
+                document.getElementById('scoreTrust').innerText = scores.trust;
+                document.getElementById('totalMental').innerText = Math.round(mentalScore);
+
+                // メンタル影響の説明
+                let mentalText = "";
+                if(mentalScore < 30) mentalText = "⚠️ 深刻なメンタル消耗。成長率が最大50%減衰します。";
+                else if(mentalScore < 50) mentalText = "⚠️ メンタル負荷が高く、成長率が20-50%減衰します。";
+                else if(mentalScore < 70) mentalText = "普通レベル。成長率への影響は軽微です。";
+                else mentalText = "✓ 良好な状態。最大限のパフォーマンスが期待できます。";
+                document.getElementById('mentalImpact').innerText = mentalText;
+
+                document.getElementById('scoreAffinity').innerText = Math.round(mentalScore) + "%";
+
+                // 2. 年収推移計算 (10年間、メンタル係数反映)
+                const years = Array.from({length: 11}, (_, i) => `${i}年目`);
+                const scenarios = calculateScenarios(target, growth, type, mentalMultiplier, true);
+
+                // 現職を継続した場合のシミュレーション
+                const currentGrowth = currentCompanyData ? currentCompanyData.growth : 1.0;
+                const currentScenarios = calculateScenarios(current, currentGrowth, 'corporate', mentalMultiplier * 0.8, false); // 現職はメンタル負荷考慮
+
+                // 3. 企業比較テーブルの更新
+                updateComparisonTable(currentCompanyName, targetCompanyName, current, target, currentScenarios, scenarios, growth, currentGrowth);
+
+                // 4. グラフ描画
+                renderChart(years, scenarios, currentScenarios);
+
+                // 5. 計算根拠の表示
+                showCalculationBasis(target, growth, type, mentalScore, mentalMultiplier);
+
+                // 6. アドバイス生成
+                generateAdvice(mentalScore, growth, type, target, current, scenarios, currentScenarios, currentCompanyName, targetCompanyName);
+
+                document.getElementById('resultSection').classList.remove('hidden');
+                setTimeout(() => {
+                    const resultSection = document.getElementById('resultSection');
+                    if(resultSection) {
+                        window.scrollTo({ top: resultSection.offsetTop - 20, behavior: 'smooth' });
+                    }
+                }, 100);
+            } catch(error) {
+                console.error('シミュレーション実行エラー:', error);
+                alert('エラーが発生しました: ' + error.message);
+            }
+        }
+
+        function updateComparisonTable(currentName, targetName, currentIncome, targetIncome, currentScenarios, targetScenarios, targetGrowth, currentGrowth) {
+            const currentIndustry = currentCompanyData ? currentCompanyData.industry : "選択した業界";
+            const targetIndustry = targetCompanyData ? targetCompanyData.industry : "選択した業界";
+
+            document.getElementById('compareCurrentName').innerText = currentName;
+            document.getElementById('compareTargetName').innerText = targetName;
+
+            document.getElementById('compareCurrentIncome').innerText = currentIncome + '万円';
+            document.getElementById('compareTargetIncome').innerText = targetIncome + '万円';
+
+            const incomeDiff = targetIncome - currentIncome;
+            const incomeDiffPct = ((incomeDiff / currentIncome) * 100).toFixed(1);
+            document.getElementById('compareIncomeDiff').innerText = (incomeDiff > 0 ? '+' : '') + incomeDiff + '万 (' + (incomeDiff > 0 ? '+' : '') + incomeDiffPct + '%)';
+            document.getElementById('compareIncomeDiff').className = 'p-3 text-center font-bold ' + (incomeDiff > 0 ? 'text-green-600' : 'text-red-600');
+
+            // 業界平均
+            const industryAvgMap = {
+                'it': 466, 'consulting': 546, 'finance': 500, 'manufacturing': 492, 'trading': 479, 'other': 450
+            };
+            const currentIndKey = document.getElementById('currentIndustry').value;
+            const currentAvg = industryAvgMap[currentIndKey] || 450;
+            const targetAvg = targetCompanyData ? Math.round(targetCompanyData.avgSalary * 0.7) : currentAvg; // 業界平均は企業平均の70%と仮定
+
+            document.getElementById('compareCurrentAvg').innerText = currentAvg + '万円 (' + currentIndustry + ')';
+            document.getElementById('compareTargetAvg').innerText = targetAvg + '万円 (' + targetIndustry + ')';
+            document.getElementById('compareAvgDiff').innerText = (targetAvg > currentAvg ? '+' : '') + Math.round(targetAvg - currentAvg) + '万円';
+
+            // 業界成長性
+            const currentGrowthPct = ((currentGrowth - 1) * 100).toFixed(0);
+            const targetGrowthPct = ((targetGrowth - 1) * 100).toFixed(0);
+            document.getElementById('compareCurrentGrowth').innerText = (currentGrowth >= 1 ? '+' : '') + currentGrowthPct + '%/年';
+            document.getElementById('compareTargetGrowth').innerText = (targetGrowth >= 1 ? '+' : '') + targetGrowthPct + '%/年';
+            document.getElementById('compareGrowthDiff').innerText = (targetGrowth > currentGrowth ? '↑ 成長性向上' : targetGrowth < currentGrowth ? '↓ 成長性低下' : '→ 同等');
+
+            // 10年後予測
+            const current10y = currentScenarios.average[10];
+            const target10y = targetScenarios.average[10];
+            document.getElementById('compareCurrent10y').innerText = current10y + '万円';
+            document.getElementById('compareTarget10y').innerText = target10y + '万円';
+            const diff10y = target10y - current10y;
+            document.getElementById('compare10yDiff').innerText = (diff10y > 0 ? '+' : '') + diff10y + '万円';
+            document.getElementById('compare10yDiff').className = 'p-3 text-center font-bold ' + (diff10y > 0 ? 'text-green-600' : 'text-red-600');
+        }
+
+        function calculateScenarios(target, growth, type, mentalMultiplier, updateDisplay = false) {
+            const data = { optimistic: [], average: [], stretch: [] };
+
+            // 基礎成長率
+            let baseGrowth = (type === 'freelance') ? 0.12 : 0.04;
+
+            for(let y=0; y<=10; y++) {
+                // 楽観シナリオ: 業界成長率 × 1.2倍 × メンタル維持
+                let optimisticGrowth = Math.pow(1 + (baseGrowth * growth * 1.2), y);
+                data.optimistic.push(Math.round(target * optimisticGrowth * mentalMultiplier));
+
+                // 平均シナリオ: 業界成長率 × メンタル係数
+                let avgGrowth = Math.pow(1 + (baseGrowth * growth), y);
+                data.average.push(Math.round(target * avgGrowth * mentalMultiplier));
+
+                // ストレッチシナリオ: 低成長 × メンタル不調想定
+                let stretchGrowth = Math.pow(1 + (baseGrowth * 0.3), y);
+                let stretchMental = Math.max(0.4, mentalMultiplier * 0.7); // メンタル悪化想定
+                data.stretch.push(Math.round(target * stretchGrowth * stretchMental));
+            }
+
+            // 10年後の期待値を表示（転職先のみ）
+            if(updateDisplay) {
+                const grossIncome = data.average[10];
+                const takeHomeRate = (type === 'freelance') ? 0.68 : 0.80;
+                const netIncome = Math.round(grossIncome * takeHomeRate);
+
+                document.getElementById('expectIncome').innerText = grossIncome + "万";
+                document.getElementById('expectNet').innerText = "手取り: 約" + netIncome + "万";
+            }
+
+            return data;
+        }
+
+        function renderChart(labels, targetData, currentData) {
+            const ctx = document.getElementById('incomeChart');
+            if(!ctx) return;
+
+            if(chartInstance) chartInstance.destroy();
+
+            const datasets = [
+                {
+                    label: '【転職】楽観シナリオ',
+                    data: targetData.optimistic,
+                    borderColor: '#4ade80',
+                    backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                    fill: false,
+                    tension: 0.3,
+                    borderWidth: 2
+                },
+                {
+                    label: '【転職】平均シナリオ',
+                    data: targetData.average,
+                    borderColor: '#60a5fa',
+                    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                    fill: false,
+                    tension: 0.3,
+                    borderWidth: 3
+                },
+                {
+                    label: '【転職】ストレッチシナリオ',
+                    data: targetData.stretch,
+                    borderColor: '#f87171',
+                    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.3,
+                    borderWidth: 2
+                },
+                {
+                    label: '【現職継続】平均想定',
+                    data: currentData.average,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                    borderDash: [10, 5],
+                    fill: false,
+                    tension: 0.3,
+                    borderWidth: 2
+                }
+            ];
+
+            chartInstance = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + '万円';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '万';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showCalculationBasis(target, growth, type, mentalScore, mentalMultiplier) {
+            const baseGrowth = (type === 'freelance') ? 12 : 4;
+            const industryGrowthPct = ((growth - 1) * 100).toFixed(0);
+            const mentalPenalty = ((1 - mentalMultiplier) * 100).toFixed(0);
+            const takeHomeRate = (type === 'freelance') ? 68 : 80;
+
+            const grossIncome = document.getElementById('expectIncome').innerText.replace('万', '');
+            const netIncome = Math.round(parseFloat(grossIncome) * takeHomeRate / 100);
+
+            document.getElementById('expectNet').innerText = "手取り: 約" + netIncome + "万";
+
+            let html = `
+                <p><strong>基準年収:</strong> ${target}万円 (${type === 'freelance' ? 'フリーランス想定' : '選択企業ベース'})</p>
+                <p><strong>業界成長率:</strong> 年${industryGrowthPct > 0 ? '+' : ''}${industryGrowthPct}% (係数: ${growth})</p>
+                <p><strong>基礎成長率:</strong> ${type === 'freelance' ? '年12% (フリーランススキル向上想定)' : '年4% (会社員昇給想定)'}</p>
+                <p><strong>メンタル係数:</strong> ${(mentalMultiplier * 100).toFixed(0)}% (スコア${Math.round(mentalScore)}点 → 成長率が${mentalPenalty}%減衰)</p>
+                <p><strong>手取り想定:</strong> ${takeHomeRate}% (${type === 'freelance' ? '税金・保険32%控除' : '源泉徴収・社保20%控除'})</p>
+                <p class="mt-3 text-xs text-gray-500">※ 計算式: 基準年収 × (1 + 基礎成長率 × 業界成長率)^年数 × メンタル係数</p>
+            `;
+            document.getElementById('calculationBasis').innerHTML = html;
+        }
+
+        function generateAdvice(mentalScore, growth, type, target, current, scenarios, currentScenarios, currentCompanyName, targetCompanyName) {
+            let advice = [];
+            let warnings = [];
+
+            // 企業比較の追加
+            advice.push(`━━━━━━━━━━━━━━━━━━━━━━\n【企業比較】${currentCompanyName} → ${targetCompanyName}\n━━━━━━━━━━━━━━━━━━━━━━`);
+
+            // メンタル面の分析
+            if(mentalScore < 40) {
+                warnings.push("【重大警告】現職でのメンタル消耗が深刻です。このまま継続すると、スキル成長が大幅に阻害され、市場価値が低下するリスクがあります。");
+                advice.push("早期の環境変更を検討すべきタイミングです。");
+            } else if(mentalScore < 60) {
+                warnings.push("【注意】現職環境に課題があります。メンタル負荷により本来の成長率が20-30%損なわれている可能性があります。");
+            } else if(mentalScore >= 80) {
+                advice.push("✓ 現職環境は良好です。転職は「さらなる高み」を目指す前向きな選択として機能します。");
+            }
+
+            // メンタル項目別の詳細分析
+            const criticalIssues = [];
+            if(scores.growth < 40) criticalIssues.push("スキル成長");
+            if(scores.worklife < 40) criticalIssues.push("ワークライフバランス");
+            if(scores.trust < 40) criticalIssues.push("経営陣への信頼");
+            if(scores.fulfillment < 40) criticalIssues.push("やりがい");
+
+            if(criticalIssues.length > 0) {
+                warnings.push(`【特に懸念される項目】${criticalIssues.join('、')}が低スコアです。これらは長期的なキャリア成長に直結します。`);
+            }
+
+            // 数値面の分析
+            const incomeGap = target - current;
+            const incomeGapPct = ((incomeGap / current) * 100).toFixed(0);
+
+            if(incomeGap > 0) {
+                advice.push(`\n【年収分析】目標年収は現在より${incomeGapPct}%アップ（+${incomeGap}万円）。`);
+                if(incomeGap > current * 0.5) {
+                    warnings.push("【高リスク】年収50%以上アップは市場的に難易度が非常に高く、相応のスキル証明・実績が必要です。段階的なキャリアアップも検討してください。");
+                } else if(incomeGap > current * 0.3) {
+                    advice.push("年収30%以上アップは挑戦的ですが、スキルと企業選択次第で実現可能な範囲です。");
+                } else if(incomeGap > current * 0.15) {
+                    advice.push("適度な年収アップで、市場的にも実現可能性の高い範囲です。");
+                }
+            } else if(incomeGap < 0) {
+                warnings.push(`【注意】年収が${Math.abs(incomeGap)}万円ダウンします。メンタル改善やワークライフバランス重視の判断と思われますが、生活設計の見直しが必要です。`);
+            }
+
+            // 業界成長性の分析
+            if(growth < 1.0) {
+                warnings.push(`【業界リスク】所属業界が縮小傾向にあります。個人の努力では相殺できない構造的逆風があります。成長業界への転職を強く推奨します。`);
+            } else if(growth >= 1.2) {
+                advice.push("✓ 成長業界を選択しています。業界の追い風を受けながらキャリアを伸ばせる環境です。");
+            }
+
+            // フリーランス特有の分析
+            if(type === 'freelance') {
+                advice.push("\n【独立】フリーランスは年収の伸びしろが大きい一方、案件獲得リスクと社会保障の自己負担があります。");
+                warnings.push("ストレッチシナリオ（赤線）への備えとして、最低6ヶ月分の生活費を確保することを推奨します。");
+
+                // 10年後の最悪ケースチェック
+                if(scenarios.stretch[10] < current * 0.8) {
+                    warnings.push("⚠️ 最悪シナリオでは現在より年収が下がる可能性があります。リスク許容度を慎重に検討してください。");
+                }
+            } else {
+                // 企業間の比較
+                if(targetCompanyData && currentCompanyData) {
+                    const growthDiff = targetCompanyData.growth - currentCompanyData.growth;
+                    if(growthDiff > 0.1) {
+                        advice.push(`✓ ${targetCompanyName}の方が業界成長率が高く、長期的なキャリア展望が良好です。`);
+                    } else if(growthDiff < -0.1) {
+                        warnings.push(`【注意】${currentCompanyName}の方が業界成長率が高い可能性があります。短期的な年収アップだけでなく、長期的な視点も重要です。`);
+                    }
+                }
+            }
+
+            // 転職成功期待値の計算
+            const matchScore = Math.min(100, Math.round(mentalScore * growth * 0.8));
+            document.getElementById('scoreMatch').innerText = matchScore + "%";
+
+            // 10年後の差分計算
+            const diff10y = scenarios.average[10] - currentScenarios.average[10];
+
+            // 最終アドバイスの組み立て
+            let finalAdvice = "";
+            if(warnings.length > 0) {
+                finalAdvice += "【警告・注意事項】\n" + warnings.join("\n\n") + "\n\n";
+            }
+            if(advice.length > 0) {
+                finalAdvice += "【分析結果】\n" + advice.join("\n") + "\n\n";
+            }
+            finalAdvice += "━━━━━━━━━━━━━━━━━━━━━━\n【結論】\n";
+            finalAdvice += `・${currentCompanyName}（現職）と${targetCompanyName}（転職先）の10年後の差は${Math.abs(diff10y)}万円です。\n`;
+            finalAdvice += "・提示された3つのシナリオを比較し、最悪ケースでも受け入れられる範囲かを確認した上で、最も納得感のある道を選択してください。\n";
+            finalAdvice += "・メンタルスコアが低い場合は、年収よりも「環境の改善」を優先することが長期的には有利です。";
+
+            document.getElementById('aiAdvice').innerText = finalAdvice;
+        }
+
+        // ページ読み込み時の初期化
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('ページ読み込み完了');
+            updateCareerType();
+
+            // イベントリスナーの登録
+            const currentIncomeEl = document.getElementById('currentIncome');
+            const targetIncomeEl = document.getElementById('targetIncome');
+
+            if(currentIncomeEl) {
+                currentIncomeEl.addEventListener('input', updateComparisonSummary);
+            }
+            if(targetIncomeEl) {
+                targetIncomeEl.addEventListener('input', updateComparisonSummary);
+            }
+        });
+    </script>
+</body>
+</html>
