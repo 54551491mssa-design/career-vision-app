@@ -157,4 +157,9 @@ if __name__ == '__main__':
     print("\n終了するには Ctrl+C を押してください。")
     print("=" * 60 + "\n")
 
-    app.run(debug=True, port=5000)
+   import os
+    # Renderから指定されたポート番号（10000など）を取得、なければ5000を使う
+    port = int(os.environ.get("PORT", 5000))
+    # host="0.0.0.0" にすることで外部（インターネット）からの接続を許可します
+    app.run(host="0.0.0.0", port=port)
+    # --- ここまで ---
