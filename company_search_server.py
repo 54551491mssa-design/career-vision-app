@@ -147,19 +147,11 @@ def health():
 
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("企業情報検索サーバーを起動しています...")
-    print("URL: http://localhost:5000")
-    print("=" * 60)
-    print("\n【重要】")
-    print("このサーバーはキャリアシミュレーターと連携して動作します。")
-    print("ブラウザでHTMLファイルを開いた状態で、このサーバーを起動してください。")
     print("\n終了するには Ctrl+C を押してください。")
     print("=" * 60 + "\n")
 
-   import os
-    # Renderから指定されたポート番号（10000など）を取得、なければ5000を使う
+    import os
+    # Renderのポート番号を読み込む
     port = int(os.environ.get("PORT", 5000))
-    # host="0.0.0.0" にすることで外部（インターネット）からの接続を許可します
+    # インターネットからの接続を許可
     app.run(host="0.0.0.0", port=port)
-    # --- ここまで ---
